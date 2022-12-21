@@ -1,9 +1,9 @@
 from django.apps import AppConfig
 
 
-class AccountConfig(AppConfig):
+class RupyaConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'account'
+    name = 'rupya'
     
     def ready(self) -> None:
-        import account.signals
+        import rupya.signals

@@ -6,4 +6,4 @@ from django.conf import settings
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_wallet_for_new_user(sender, **kwargs):
     if kwargs['created']:
-        Wallet.objects.create(user=kwargs['instance'])
+        Wallet.objects.create(owner=kwargs['instance'])
