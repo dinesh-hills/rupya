@@ -17,28 +17,52 @@ class TransactionSerializer(serializers.ModelSerializer):
 class WalletDepositSerializer(serializers.ModelSerializer):
     
     def save(self, **kwargs):
-        Transaction.objects.create(**self.validated_data)
         
-        Entrie.objects.create(
-            wallet=self.validated_data['to_wallet'],
-            amount=self.validated_data['amount']
-        )
+        if self.context['transaction_type'] == 'Deposit':
+            Transaction.objects.create(
+                transaction_type='Deposit',
+                **self.validated_data
+            )
+
+            Entrie.objects.create(
+                wallet=self.validated_data['to_wallet'],
+                amount= abs(self.validated_data['amount'])
+            )
+
+            cli_depoist_acc = Wallet.objects.get(owner_id=3)
+            cli_depoist_acc.balance += self.validated_data['amount']
+            cli_depoist_acc.save()
         
-        deposit = Wallet.objects.get(owner_id=3)
-        deposit.balance += self.validated_data['amount']
-        deposit.save()
+            wallet = Wallet.objects.get(pk=self.validated_data['to_wallet'].id)
+            wallet.balance += self.validated_data['amount']
+            wallet.save()
+
+        elif self.context['transaction_type'] == 'Withdraw':
+            Transaction.objects.create(
+                transaction_type='Withdraw',
+                **self.validated_data
+            )
         
-        wallet = Wallet.objects.get(pk=self.validated_data['to_wallet'].id)
-        wallet.balance += self.validated_data['amount']
-        wallet.save()
-        
+            Entrie.objects.create(
+                wallet=self.validated_data['to_wallet'],
+                amount= -self.validated_data['amount']
+            )
+            
+            cli_depoist_acc = Wallet.objects.get(owner_id=3)
+            cli_depoist_acc.balance -= self.validated_data['amount']
+            cli_depoist_acc.save()
+            
+            wallet = Wallet.objects.get(pk=self.validated_data['to_wallet'].id)
+            wallet.balance -= self.validated_data['amount']
+            wallet.save()
+            
         self.instance = wallet
         
         return self.instance
     
     class Meta:
         model = Transaction
-        fields = ['from_wallet', 'to_wallet', 'amount', 'transaction_type']
+        fields = ['from_wallet', 'to_wallet', 'amount']
     
 
 
