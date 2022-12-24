@@ -83,6 +83,10 @@ class SendReceiveSerializer(serializers.ModelSerializer):
                 amount=self.validated_data['amount']
             )            
 
+            ###########
+            # Add a transaction record as received for the receiver wallet.
+            ###########
+            
             sender_wallet = Wallet.objects.get(pk=sender_wallet_id)
             receiver_wallet = Wallet.objects.get(pk=self.validated_data['to_wallet'].id)
             
@@ -94,6 +98,13 @@ class SendReceiveSerializer(serializers.ModelSerializer):
             
             self.instance = sender_wallet
             return self.instance
+        
+        # Request received to the sender.
+        if self.context['transaction_type'] == 'Request':
+            sender_wallet_id = self.context['sender_wallet_id']
+            pass
+        
+        
         
     class Meta:
         model = Transaction
