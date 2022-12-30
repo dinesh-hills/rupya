@@ -1,6 +1,6 @@
 from django.test import TestCase
-from .models import Wallet
-# Create your tests here.
+from .models import Transaction
 
-wallet = Wallet.objects.get(owner_id=3)
-print(wallet)
+transaction = Transaction.objects.all()
+transaction.delete()
+

@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Entrie, Transaction, Wallet
+
+from .models import CashRequest, Transaction, Wallet
+from .const import TRANSACTION_TYPE_DEPOSIT, TRANSACTION_TYPE_WITHDRAW
 
 
 class WalletSerializer(serializers.ModelSerializer):
@@ -12,58 +14,52 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = ['id', 'from_wallet', 'to_wallet', 'amount', 'transaction_type', 'transacted_at']
+
+
         
 
 class DepositWithdrawSerializer(serializers.ModelSerializer):
+
+    @staticmethod
+    def create_transactions(transaction_type ,depositer_wallet_id, amount) -> Wallet:
+        # A default acc
+        internal_acc_id = 3
+
+        internal_acc = Wallet.objects.get(owner_id=internal_acc_id)
+        user_wallet = Wallet.objects.get(pk=depositer_wallet_id)
+        transact = Transaction()
+
+        if transaction_type == TRANSACTION_TYPE_DEPOSIT:
+            internal_acc.balance += amount
+            user_wallet.balance += amount
+            transact.amount = amount
+            transact.from_wallet = internal_acc
+            transact.to_wallet = user_wallet
+            transact.transaction_type = transaction_type
+
+        elif transaction_type == TRANSACTION_TYPE_WITHDRAW:
+            internal_acc.balance -= amount
+            user_wallet.balance -= amount
+            transact.amount = amount
+            transact.from_wallet = user_wallet
+            transact.to_wallet = internal_acc
+            transact.transaction_type = transaction_type
+
+        transact.save()
+        internal_acc.save()
+        user_wallet.save()
+        
+        return user_wallet
     
     def save(self, **kwargs):
-        
-        if self.context['transaction_type'] == 'Deposit':
-            Transaction.objects.create(
-                transaction_type='Deposit',
-                **self.validated_data
-            )
-
-            Entrie.objects.create(
-                wallet=self.validated_data['to_wallet'],
-                amount=self.validated_data['amount']
-            )
-
-            cli_depoist_acc = Wallet.objects.get(owner_id=3)
-            cli_depoist_acc.balance += self.validated_data['amount']
-            cli_depoist_acc.save()
-        
-            wallet = Wallet.objects.get(pk=self.validated_data['to_wallet'].id)
-            wallet.balance += self.validated_data['amount']
-            wallet.save()
-
-        elif self.context['transaction_type'] == 'Withdraw':
-            Transaction.objects.create(
-                transaction_type='Withdraw',
-                **self.validated_data
-            )
-        
-            Entrie.objects.create(
-                wallet=self.validated_data['to_wallet'],
-                amount=-self.validated_data['amount']
-            )
-            
-            cli_depoist_acc = Wallet.objects.get(owner_id=3)
-            cli_depoist_acc.balance -= self.validated_data['amount']
-            cli_depoist_acc.save()
-            
-            wallet = Wallet.objects.get(pk=self.validated_data['to_wallet'].id)
-            wallet.balance -= self.validated_data['amount']
-            wallet.save()
-            
-        self.instance = wallet
-        
+        self.instance = self.create_transactions(self.context['transaction_type'], self.context['user_wallet_id'] ,self.validated_data['amount'])
         return self.instance
     
+
     class Meta:
         model = Transaction
         fields = ['from_wallet', 'to_wallet', 'amount']
-
+        read_only_fields = ['from_wallet', 'to_wallet']
 
 
 class SendReceiveSerializer(serializers.ModelSerializer):
@@ -77,11 +73,6 @@ class SendReceiveSerializer(serializers.ModelSerializer):
                 transaction_type='send',
                 **self.validated_data
             )
-
-            Entrie.objects.create(
-                wallet=self.validated_data['to_wallet'],
-                amount=self.validated_data['amount']
-            )            
 
             ###########
             # Add a transaction record as received for the receiver wallet.
@@ -111,61 +102,13 @@ class SendReceiveSerializer(serializers.ModelSerializer):
         fields = ['from_wallet', 'to_wallet', 'amount']
     
 
-
-
-
-
-# class AddCashSerializer(serializers.Serializer):
-#     amount = serializers.IntegerField(source='balance')
+class CashRequestSerializer(serializers.ModelSerializer):
     
-#     def create(self, validated_data):
-#         wallet = Wallet.objects.get(user_id=self.context['wallet_id'])
-#         wallet.balance += validated_data['balance']
-#         wallet.save()
-#         self.instance = wallet
-#         return self.instance
+    def save(self, **kwargs):
+        return super().save(**kwargs)
     
-# class DepositSerializer(serializers.Serializer):
-#     amount = serializers.IntegerField(source='balance')
     
-#     def create(self, validated_data):
-#         wallet = Wallet.objects.get(user_id=self.context['wallet_id'])
-#         wallet.balance -= validated_data['balance']
-#         wallet.save()
-#         self.instance = wallet
-#         return self.instance
-    
-# class TransferSerializer(serializers.Serializer):
-#     to_wallet = serializers.IntegerField()
-#     amount = serializers.IntegerField()
-    
-#     def create(self, validated_data):
-#         from_wallet_id = self.context['from_wallet']
-#         to_wallet_id = validated_data['to_wallet']
-#         amount = validated_data['amount']
-        
-#         from_wallet = Wallet.objects.get(pk=from_wallet_id)
-#         to_wallet = Wallet.objects.get(pk=to_wallet_id)
-        
-#         from_wallet.balance -= amount
-#         to_wallet.balance += amount
-        
-#         Transfer.objects.create(
-#             to_wallet=to_wallet,
-#             amount=amount,
-#             transaction_type='tranfer'
-#         )
-        
-#         from_wallet.save()
-#         to_wallet.save()
-        
-#         self.instance = from_wallet
-        
-#         return self.instance
-
-    
-# class TransactionHistory(serializers.Serializer):
-#     to_wallet = serializers.PrimaryKeyRelatedField(read_only=True)
-#     amount = serializers.IntegerField()
-#     transaction_type = serializers.CharField()
-#     transacted_at = serializers.DateTimeField()
+    class Meta:
+        model = CashRequest
+        fields = ['id', 'request_id', 'from_wallet', 'to_wallet', 'amount']
+        read_only_field = ['request_id']

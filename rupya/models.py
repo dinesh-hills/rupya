@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from .const import CASHREQUEST_STATUS_CHOICES, CASHREQUEST_STATUS_PENDING
 
 class Wallet(models.Model):
     owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -11,12 +12,6 @@ class Wallet(models.Model):
 
     def __str__(self) -> str:
         return self.owner.username
-    
-    
-class Entrie(models.Model):
-    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='entries')
-    amount = models.IntegerField()
-    created_at = models.DateTimeField(auto_now_add=True)
     
         
 class Transaction(models.Model):
@@ -32,17 +27,7 @@ class Transaction(models.Model):
     
     
 class CashRequest(models.Model):
-    CASHREQUEST_STATUS_PENDING = 'P'
-    CASHREQUEST_STATUS_ACCEPTED = 'A'
-    CASHREQUEST_STATUS_REJECTED = 'P'
-    
-    CASHREQUEST_STATUS_CHOICES = [
-        (CASHREQUEST_STATUS_PENDING, 'Pending'),
-        (CASHREQUEST_STATUS_ACCEPTED, 'Accepted'),
-        (CASHREQUEST_STATUS_REJECTED, 'Rejected'),
-    ]
-    
-    # request_id = models.BigIntegerField()
+    request_id = models.BigIntegerField()
     from_wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='+')
     to_wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='+')
     amount = models.IntegerField()
