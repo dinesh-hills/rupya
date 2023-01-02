@@ -1,7 +1,7 @@
 from random import getrandbits
 from rest_framework import serializers
 from .models import CashRequest, Transaction, Wallet
-from .const import TRANSACTION_TYPE_DEPOSIT, TRANSACTION_TYPE_RECEIVE, TRANSACTION_TYPE_SEND, TRANSACTION_TYPE_WITHDRAW
+from .const import CASHREQUEST_STATUS_ACCEPTED, CASHREQUEST_STATUS_CHOICES, CASHREQUEST_STATUS_REJECTED, TRANSACTION_TYPE_DEPOSIT, TRANSACTION_TYPE_RECEIVE, TRANSACTION_TYPE_SEND, TRANSACTION_TYPE_WITHDRAW
 
 
 class WalletSerializer(serializers.ModelSerializer):
@@ -125,3 +125,27 @@ class CashRequestSerializer(serializers.ModelSerializer):
         model = CashRequest
         fields = ['id', 'request_id', 'from_wallet', 'to_wallet', 'amount', 'req_status', 'created_at']
         read_only_fields = ['id', 'request_id', 'to_wallet', 'req_status', 'created_at']
+
+
+class CashRequestHandleSerializer(serializers.Serializer):
+    
+    def save(self, **kwargs):
+        
+        print(self.validated_data.keys())
+        cash_request = self.context['cash_req']
+
+        if self.validated_data['req_ans'] == CASHREQUEST_STATUS_ACCEPTED:
+            pass
+
+        elif self.validated_data['req_ans'] == CASHREQUEST_STATUS_REJECTED:
+            pass
+        
+        ### if accepted record the transaction as usual for 
+        ### both the users like a money send 
+        ### add the money transafer logic as in the send above
+        ### if rejected create a rejected cash request of the obj.
+        # transact = Transaction()
+        # for t in transact
+
+    req_ans = serializers.CharField(max_length=1)
+    

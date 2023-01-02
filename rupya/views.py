@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import CashRequest, Transaction, Wallet
-from .serializers import CashRequestSerializer, SendReceiveSerializer, TransactionSerializer, DepositWithdrawSerializer, WalletSerializer
+from .serializers import CashRequestHandleSerializer, CashRequestSerializer, SendReceiveSerializer, TransactionSerializer, DepositWithdrawSerializer, WalletSerializer
 from .const import TRANSACTION_TYPE_DEPOSIT, TRANSACTION_TYPE_RECEIVE, TRANSACTION_TYPE_REQUEST, TRANSACTION_TYPE_SEND, TRANSACTION_TYPE_WITHDRAW
 
 
@@ -59,6 +59,15 @@ class DepositWithdrawView(APIView):
         
 class SendReceviceView(APIView):
 
+    def get(self, request, pk):
+        try:
+            cash_request = CashRequest.objects.filter(to_wallet=pk)
+            serializer = CashRequestSerializer(cash_request, many=True)
+            return Response(serializer.data)
+        except CashRequest.DoesNotExist:
+            return Response({'error': None} ,status=status.HTTP_200_OK)
+
+
     def post(self, request, pk):
         if request.path.endswith('send'):
             serializer = SendReceiveSerializer(data=request.data)
@@ -82,8 +91,26 @@ class CashRequestListView(APIView):
 
     def get(self, request, pk):
         try:
-            cash_request = CashRequest.objects.get(from_wallet=pk)
+            cash_request = CashRequest.objects.filter(from_wallet=pk)
+            serializer = CashRequestSerializer(cash_request, many=True)
+            return Response(serializer.data)
+        except CashRequest.DoesNotExist:
+            return Response({'error': None} ,status=status.HTTP_200_OK)
+
+class CashRequestDetailView(APIView):
+
+    def get(self, request, pk, req_pk):
+        try:
+            cash_request = CashRequest.objects.get(pk=req_pk)
             serializer = CashRequestSerializer(cash_request)
             return Response(serializer.data)
         except CashRequest.DoesNotExist:
             return Response({'error': None} ,status=status.HTTP_200_OK)
+
+    def post(self, request, pk, req_pk):
+        cash_request = CashRequest.objects.get(pk=req_pk)
+        serializer = CashRequestHandleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.context['cash_req'] = cash_request
+        serializer.save()
+        return Response('ok')
