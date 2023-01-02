@@ -11,4 +11,6 @@ urlpatterns = [
     path('<int:pk>/withdraw', views.DepositWithdrawView.as_view(), name="withdraw"),
     
     path('<int:pk>/send', views.SendReceviceView.as_view(), name="send"),
+    path('<int:pk>/receive', views.SendReceviceView.as_view(), name="receive"),
+    path('<int:pk>/requests', views.CashRequestListView.as_view(), name="requests"),
 ]

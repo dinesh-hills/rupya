@@ -1,5 +1,5 @@
+from random import getrandbits
 from rest_framework import serializers
-
 from .models import CashRequest, Transaction, Wallet
 from .const import TRANSACTION_TYPE_DEPOSIT, TRANSACTION_TYPE_RECEIVE, TRANSACTION_TYPE_SEND, TRANSACTION_TYPE_WITHDRAW
 
@@ -101,3 +101,27 @@ class SendReceiveSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = ['from_wallet', 'to_wallet', 'amount']
         read_only_fields = ['from_wallet']
+
+
+class CashRequestSerializer(serializers.ModelSerializer):
+
+    def save(self, **kwargs):
+        requester_wallet = Wallet.objects.get(pk=self.context['requester_wallet_id'])
+        recipient_wallet = self.validated_data['from_wallet']
+        amount = self.validated_data['amount']
+
+        cash_request = CashRequest()
+        cash_request.request_id = getrandbits(32)
+        cash_request.from_wallet = recipient_wallet
+        cash_request.to_wallet = requester_wallet
+        cash_request.amount = amount
+        cash_request.save()
+
+        self.instance = cash_request
+        return self.instance
+
+
+    class Meta:
+        model = CashRequest
+        fields = ['id', 'request_id', 'from_wallet', 'to_wallet', 'amount', 'req_status', 'created_at']
+        read_only_fields = ['id', 'request_id', 'to_wallet', 'req_status', 'created_at']
