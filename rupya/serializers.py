@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import CashRequest, Transaction, Wallet
-from .const import TRANSACTION_TYPE_DEPOSIT, TRANSACTION_TYPE_WITHDRAW
+from .const import TRANSACTION_TYPE_DEPOSIT, TRANSACTION_TYPE_RECEIVE, TRANSACTION_TYPE_SEND, TRANSACTION_TYPE_WITHDRAW
 
 
 class WalletSerializer(serializers.ModelSerializer):
@@ -66,49 +66,38 @@ class SendReceiveSerializer(serializers.ModelSerializer):
     
     def save(self, **kwargs):
         
-        if self.context['transaction_type'] == 'Send':
+        if self.context['transaction_type'] == TRANSACTION_TYPE_SEND:
             sender_wallet_id = self.context['sender_wallet_id']
+            receiver_wallet = self.validated_data['to_wallet']
+            amount = self.validated_data['amount']
 
-            Transaction.objects.create(
-                transaction_type='send',
-                **self.validated_data
-            )
-
-            ###########
-            # Add a transaction record as received for the receiver wallet.
-            ###########
-            
             sender_wallet = Wallet.objects.get(pk=sender_wallet_id)
-            receiver_wallet = Wallet.objects.get(pk=self.validated_data['to_wallet'].id)
             
-            sender_wallet.balance -= self.validated_data['amount']
-            receiver_wallet.balance += self.validated_data['amount']
-        
+            sender_wallet.balance -= amount
+            receiver_wallet.balance += amount
+
+
+            ttypes = [TRANSACTION_TYPE_SEND, TRANSACTION_TYPE_RECEIVE]
+
+            transactions = []
+            for ttype in ttypes:
+                t = Transaction()
+                t.from_wallet = sender_wallet
+                t.to_wallet = receiver_wallet
+                t.amount = amount
+                t.transaction_type = ttype
+                transactions.append(t)
+
+            Transaction.objects.bulk_create(transactions)
+
             sender_wallet.save()
             receiver_wallet.save()
             
             self.instance = sender_wallet
             return self.instance
         
-        # Request received to the sender.
-        if self.context['transaction_type'] == 'Request':
-            sender_wallet_id = self.context['sender_wallet_id']
-            pass
-        
-        
         
     class Meta:
         model = Transaction
         fields = ['from_wallet', 'to_wallet', 'amount']
-    
-
-class CashRequestSerializer(serializers.ModelSerializer):
-    
-    def save(self, **kwargs):
-        return super().save(**kwargs)
-    
-    
-    class Meta:
-        model = CashRequest
-        fields = ['id', 'request_id', 'from_wallet', 'to_wallet', 'amount']
-        read_only_field = ['request_id']
+        read_only_fields = ['from_wallet']
